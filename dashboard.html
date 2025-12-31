@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Attendance Management Dashboard</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+  <div class="sidebar" id="sidebar">
+    <button id="closeSidebar" class="close-btn">&times;</button>
+    <h2>AMS Admin</h2>
+
+    <a data-section="dashboard" class="nav-link">📊 Dashboard</a>
+
+    <h3>STUDENTS</h3>
+    <a href="STUDENT_REGISTRATION_LINK_HERE" target="_blank">➕ Register Student</a>
+    <a data-section="students" class="nav-link">ℹ️ Student Info</a>
+
+    <h3>FACULTY</h3>
+    <a href="FACULTY_REGISTRATION_LINK_HERE" target="_blank">➕ Register Faculty</a>
+    <a data-section="faculty" class="nav-link">ℹ️ Faculty Info</a>
+
+    <h3>REPORTS</h3>
+    <a data-section="reports" class="nav-link">📄 Attendance Reports</a>
+
+    <h3 style="margin-top: 40px;">SYSTEM</h3>
+    <a data-section="about" class="nav-link">About Project</a>
+    <a id="logoutLink" style="color: #f87171; cursor: pointer;">Logout</a>
+  </div>
+
+  <header>
+    <button id="menuBtn">☰</button>
+    <h1 id="pageTitle">Attendance Dashboard</h1>
+  </header>
+
+  <main id="content">
+
+    <section id="section-dashboard" class="section active">
+      <h2>Attendance Overview</h2>
+      <div class="stats-cards">
+        <div class="card">
+          <h3>Total Students</h3>
+          <p id="totalStudents">—</p>
+        </div>
+        <div class="card">
+          <h3>Present Today</h3>
+          <p id="presentCount">—</p>
+        </div>
+        <div class="card">
+          <h3>Absent Today</h3>
+          <p id="absentCount">—</p>
+        </div>
+      </div>
+      <div class="chart-box">
+        <canvas id="attendanceChart"></canvas>
+      </div>
+    </section>
+
+    <section id="section-students" class="section">
+      <h2>Student Information</h2>
+      <div class="filter-controls">
+        <input type="text" id="studentSearch" placeholder="Search by Name or Roll No..." />
+        <select id="attendanceSort">
+          <option value="all">All Semesters</option>
+          <option value="weekly">Weekly View</option>
+          <option value="monthly">Monthly View</option>
+        </select>
+      </div>
+      <div id="studentDetails" class="details-grid"></div>
+    </section>
+
+    <section id="section-faculty" class="section">
+      <h2>Faculty Information</h2>
+      <div class="filter-controls">
+        <input type="text" id="facultySearch" placeholder="Search Faculty Name..." />
+      </div>
+      <div id="facultyDetails" class="details-grid"></div>
+    </section>
+
+    <section id="section-reports" class="section">
+      <h2>Attendance Reports</h2>
+      <div id="reportsContainer">
+        <p>Aggregation logic loading...</p>
+      </div>
+    </section>
+
+    <section id="section-about" class="section">
+      <h2>About Project</h2>
+      <div class="card" style="width: 100%; text-align: left;">
+        <p><strong>System:</strong> Attendance Management System v2.0</p>
+        <p><strong>Database:</strong> Firebase Firestore</p>
+        <p><strong>Frontend:</strong> Vanilla JS / CSS3</p>
+      </div>
+    </section>
+
+  </main>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
