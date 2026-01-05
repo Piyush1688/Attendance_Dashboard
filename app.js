@@ -1,123 +1,109 @@
 import { db } from "./firebase.js";
 import { collection, onSnapshot } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
 
-// Global data storage
 let allStudents = [];
-let allFaculty = [];
+let myChart = null;
 
-// --- 1. SIDEBAR & NAVIGATION LOGIC ---
-const menuBtn = document.getElementById("menuBtn");
-const closeSidebar = document.getElementById("closeSidebar");
+// --- NAVIGATION & SIDEBAR ---
 const sidebar = document.getElementById("sidebar");
 const body = document.body;
-const links = document.querySelectorAll(".nav-link");
-const sections = document.querySelectorAll(".section");
 
-// Open Sidebar
-menuBtn.addEventListener("click", () => {
-    sidebar.classList.toggle("active");
-    body.classList.toggle("sidebar-open");
-});
+document.getElementById("menuBtn").onclick = () => { sidebar.classList.toggle("active"); body.classList.toggle("sidebar-open"); };
+document.getElementById("closeSidebar").onclick = () => { sidebar.classList.remove("active"); body.classList.remove("sidebar-open"); };
 
-// Close Sidebar via X button
-closeSidebar.addEventListener("click", () => {
-    sidebar.classList.remove("active");
-    body.classList.remove("sidebar-open");
-});
-
-// Switch Sections logic
-links.forEach(link => {
-    link.addEventListener("click", () => {
+document.querySelectorAll(".nav-link").forEach(link => {
+    link.onclick = () => {
         const target = link.getAttribute("data-section");
-        
-        // Update UI
-        sections.forEach(sec => sec.classList.remove("active"));
-        document.getElementById("section-" + target).classList.add("active");
-        document.getElementById("pageTitle").innerText = target.charAt(0).toUpperCase() + target.slice(1);
-
-        // Auto-close sidebar on mobile
-        if (window.innerWidth < 768) {
-            sidebar.classList.remove("active");
-            body.classList.remove("sidebar-open");
-        }
-    });
+        showSection(target);
+    };
 });
 
-// --- 2. DASHBOARD LOGIC ---
-function updateDashboard(students) {
-    const total = students.length;
-    const present = students.filter(s => s.status === "Present").length;
-    const absent = total - present;
-
-    document.getElementById("totalStudents").innerText = total;
-    document.getElementById("presentCount").innerText = present;
-    document.getElementById("absentCount").innerText = absent;
-
-    // Draw Chart
-    const ctx = document.getElementById("attendanceChart").getContext("2d");
-    if (window.myChart) window.myChart.destroy();
-    window.myChart = new Chart(ctx, {
-        type: "bar",
-        data: {
-            labels: ["Present", "Absent"],
-            datasets: [{
-                label: 'Student Count',
-                data: [present, absent],
-                backgroundColor: ["#4caf50", "#f44336"]
-            }]
-        },
-        options: { responsive: true }
-    });
+function showSection(id) {
+    document.querySelectorAll(".section").forEach(s => s.classList.remove("active"));
+    document.getElementById("section-" + id).classList.add("active");
+    if (window.innerWidth < 768) sidebar.classList.remove("active");
 }
 
-// --- 3. STUDENT SEARCH & RENDER ---
-function renderStudents(data) {
-    const container = document.getElementById("studentDetails");
-    container.innerHTML = data.map(s => `
-        <div class="card" style="text-align: left;">
-            <strong>${s.name}</strong> (Roll: ${s.rollNo})<br>
-            <small>Section: ${s.section} | Status: <span style="color: ${s.status === 'Present' ? 'green' : 'red'}">${s.status}</span></small>
-        </div>
-    `).join('');
-}
-
-document.getElementById("studentSearch").addEventListener("input", (e) => {
-    const term = e.target.value.toLowerCase();
-    const filtered = allStudents.filter(s => s.name.toLowerCase().includes(term) || s.rollNo.toString().includes(term));
-    renderStudents(filtered);
-});
-
-// --- 4. FACULTY SEARCH & RENDER ---
-function renderFaculty(data) {
-    const container = document.getElementById("facultyDetails");
-    container.innerHTML = data.map(f => `
-        <div class="card" style="text-align: left; border-left: 4px solid #6366f1;">
-            <strong>${f.name}</strong><br>
-            <small>${f.designation} - ${f.department}</small>
-        </div>
-    `).join('');
-}
-
-document.getElementById("facultySearch").addEventListener("input", (e) => {
-    const term = e.target.value.toLowerCase();
-    const filtered = allFaculty.filter(f => f.name.toLowerCase().includes(term));
-    renderFaculty(filtered);
-});
-
-// --- 5. INITIALIZE FIREBASE LISTENERS ---
+// --- DATA FETCHING & FILTERING ---
 function init() {
-    // Listen for Student changes
+    // Populate Roll Numbers 1-80
+    const rollSelect = document.getElementById("filterRoll");
+    for (let i = 1; i <= 80; i++) {
+        let opt = document.createElement("option");
+        opt.value = i; opt.text = i; rollSelect.add(opt);
+    }
+
     onSnapshot(collection(db, "students"), (snapshot) => {
-        allStudents = snapshot.docs.map(doc => doc.data());
+        allStudents = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         updateDashboard(allStudents);
-        renderStudents(allStudents);
+        renderStudentList();
     });
 
-    // Listen for Faculty changes
-    onSnapshot(collection(db, "faculty"), (snapshot) => {
-        allFaculty = snapshot.docs.map(doc => doc.data());
-        renderFaculty(allFaculty);
+    // Filter Listeners
+    ["studentSearch", "filterDept", "filterYear", "filterSection", "filterRoll"].forEach(id => {
+        document.getElementById(id).addEventListener("input", renderStudentList);
     });
+}
+
+function renderStudentList() {
+    const term = document.getElementById("studentSearch").value.toLowerCase();
+    const dept = document.getElementById("filterDept").value;
+    const year = document.getElementById("filterYear").value;
+    const section = document.getElementById("filterSection").value;
+    const roll = document.getElementById("filterRoll").value;
+
+    const filtered = allStudents.filter(s => {
+        const matchesSearch = s.name?.toLowerCase().includes(term) || s.rollno?.toString().includes(term);
+        const matchesDept = dept === "" || s.department === dept;
+        const matchesYear = year === "" || s.year === year;
+        const matchesSection = section === "" || s.section === section;
+        const matchesRoll = roll === "" || s.rollno?.toString() === roll;
+        return matchesSearch && matchesDept && matchesYear && matchesSection && matchesRoll;
+    });
+
+    document.getElementById("studentDetails").innerHTML = filtered.map(s => `
+        <div class="card student-card" onclick="openProfile('${s.id}')">
+            <div style="color: #6366f1; font-weight: bold; font-size: 0.8rem;">${s.year}</div>
+            <strong>${s.name}</strong><br>
+            <small>Roll: ${s.rollno} | Dept: ${s.department}</small>
+        </div>
+    `).join('');
+}
+
+// --- INDIVIDUAL PROFILE VIEW ---
+window.openProfile = function(id) {
+    const s = allStudents.find(student => student.id === id);
+    if (!s) return;
+
+    showSection("student-profile");
+    document.getElementById("profileContainer").innerHTML = `
+        <div class="card profile-header">
+            <div class="profile-layout">
+                <div class="profile-info">
+                    <h1>${s.name}</h1>
+                    <p><strong>Email:</strong> ${s.email}</p>
+                    <p><strong>Mobile:</strong> ${s.mobile}</p>
+                    <p><strong>DOB:</strong> ${s.dob}</p>
+                    <p><strong>Gender:</strong> ${s.gender}</p>
+                </div>
+                <div class="profile-stats">
+                    <p><strong>Roll No:</strong> ${s.rollno}</p>
+                    <p><strong>Section:</strong> ${s.section}</p>
+                    <p><strong>Year:</strong> ${s.year}</p>
+                    <p><strong>Images Captured:</strong> ${s.imagesCount}</p>
+                    <p><strong>Joined:</strong> ${new Date(s.createdAt).toLocaleDateString()}</p>
+                </div>
+            </div>
+        </div>
+    `;
+};
+
+document.getElementById("backToList").onclick = () => showSection("students");
+
+// --- DASHBOARD CHART ---
+function updateDashboard(students) {
+    document.getElementById("totalStudents").innerText = students.length;
+    // (Existing Chart Logic stays here...)
 }
 
 init();

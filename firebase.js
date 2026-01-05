@@ -1,25 +1,21 @@
 // firebase.js
-// Modular Firebase v9 setup for Attendance Dashboard
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
 import { getFirestore } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
 
-// ✅ Your Firebase Web App configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyBOlzMgjaaugPQYTGE2ICtwNs1envpkqbo",
-  authDomain: "attendance-record-a28ff.firebaseapp.com",
-  projectId: "attendance-record-a28ff",
-  storageBucket: "attendance-record-a28ff.firebasestorage.app",
-  messagingSenderId: "880634261655",
-  appId: "1:880634261655:web:18048313a4885263f1b9d2"
+  apiKey: "AIzaSyD6WFyu8KTO8ptCnlQ2ZMYpeOaROdnLJc0",
+  authDomain: "student-attendance-bd78d.firebaseapp.com",
+  projectId: "student-attendance-bd78d",
+  storageBucket: "student-attendance-bd78d.firebasestorage.app",
+  messagingSenderId: "620634497411",
+  appId: "1:620634497411:web:8663c5a7fe29518f3196b6",
+  measurementId: "G-ZZ3QWKJPV4"
 };
 
-// Initialize Firebase app
+// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// Firestore database reference
+// ✅ Export these so dashboard.js can use them
 export const db = getFirestore(app);
-
-// Authentication reference (for future login)
 export const auth = getAuth(app);
