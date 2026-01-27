@@ -17,9 +17,45 @@ function init() {
         renderStudentList();
     });
 
-    // Listen to Filters
+    // Listen to Student Filters
     ["studentSearch", "filterDept", "filterYear", "filterRoll"].forEach(id => {
         document.getElementById(id)?.addEventListener("input", renderStudentList);
+    });
+
+    // Sidebar Toggle Logic
+    const sidebar = document.getElementById("sidebar");
+    const menuBtn = document.getElementById("menuBtn");
+
+    menuBtn.onclick = (e) => {
+        e.stopPropagation();
+        sidebar.classList.toggle("active");
+        document.body.classList.toggle("sidebar-open");
+    };
+
+    // Close sidebar when clicking links
+    document.querySelectorAll(".nav-link").forEach(link => {
+        link.onclick = () => {
+            // Section Switching
+            document.querySelectorAll(".nav-link").forEach(l => l.classList.remove("active"));
+            link.classList.add("active");
+            document.querySelectorAll(".section").forEach(s => s.classList.remove("active"));
+            
+            const sectionId = "section-" + link.dataset.section;
+            document.getElementById(sectionId).classList.add("active");
+            document.getElementById("pageTitle").innerText = link.innerText.replace(/[^\w\s]/gi, '').trim();
+
+            // AUTO-HIDE SIDEBAR
+            sidebar.classList.remove("active");
+            document.body.classList.remove("sidebar-open");
+        };
+    });
+
+    // Close sidebar when clicking outside (on main content)
+    document.addEventListener("click", (e) => {
+        if (!sidebar.contains(e.target) && e.target !== menuBtn) {
+            sidebar.classList.remove("active");
+            document.body.classList.remove("sidebar-open");
+        }
     });
 }
 
@@ -89,16 +125,6 @@ window.loadLogs = async function(rollno) {
     `).join('') || '<tr><td colspan="3" style="padding:20px; text-align:center;">No data found</td></tr>';
 };
 
-// Navigation
-document.getElementById("menuBtn").onclick = () => document.getElementById("sidebar").classList.toggle("active");
-document.querySelectorAll(".nav-link").forEach(link => {
-    link.onclick = () => {
-        document.querySelectorAll(".nav-link").forEach(l => l.classList.remove("active"));
-        link.classList.add("active");
-        document.querySelectorAll(".section").forEach(s => s.classList.remove("active"));
-        document.getElementById("section-" + link.dataset.section).classList.add("active");
-    };
-});
 document.getElementById("backToList").onclick = () => {
     document.querySelectorAll(".section").forEach(s => s.classList.remove("active"));
     document.getElementById("section-students").classList.add("active");
