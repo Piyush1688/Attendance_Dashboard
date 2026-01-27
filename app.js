@@ -1,47 +1,25 @@
-import { db } from "./firebase.js";
-import { collection, onSnapshot } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+import { db, dummyDb } from "./firebase.js";
+import { collection, onSnapshot, doc, getDoc, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
 
 let allStudents = [];
-let myChart = null;
 
-// --- NAVIGATION & SIDEBAR ---
-const sidebar = document.getElementById("sidebar");
-const body = document.body;
-
-document.getElementById("menuBtn").onclick = () => { sidebar.classList.toggle("active"); body.classList.toggle("sidebar-open"); };
-document.getElementById("closeSidebar").onclick = () => { sidebar.classList.remove("active"); body.classList.remove("sidebar-open"); };
-
-document.querySelectorAll(".nav-link").forEach(link => {
-    link.onclick = () => {
-        const target = link.getAttribute("data-section");
-        showSection(target);
-    };
-});
-
-function showSection(id) {
-    document.querySelectorAll(".section").forEach(s => s.classList.remove("active"));
-    document.getElementById("section-" + id).classList.add("active");
-    if (window.innerWidth < 768) sidebar.classList.remove("active");
-}
-
-// --- DATA FETCHING & FILTERING ---
 function init() {
-    // Populate Roll Numbers 1-80
+    // Populate Roll Number Dropdown
     const rollSelect = document.getElementById("filterRoll");
     for (let i = 1; i <= 80; i++) {
-        let opt = document.createElement("option");
-        opt.value = i; opt.text = i; rollSelect.add(opt);
+        let opt = document.createElement("option"); opt.value = i; opt.text = i; rollSelect.add(opt);
     }
 
+    // Sync Students from Main DB
     onSnapshot(collection(db, "students"), (snapshot) => {
         allStudents = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         updateDashboard(allStudents);
         renderStudentList();
     });
 
-    // Filter Listeners
-    ["studentSearch", "filterDept", "filterYear", "filterSection", "filterRoll"].forEach(id => {
-        document.getElementById(id).addEventListener("input", renderStudentList);
+    // Listen to Filters
+    ["studentSearch", "filterDept", "filterYear", "filterRoll"].forEach(id => {
+        document.getElementById(id)?.addEventListener("input", renderStudentList);
     });
 }
 
@@ -49,61 +27,87 @@ function renderStudentList() {
     const term = document.getElementById("studentSearch").value.toLowerCase();
     const dept = document.getElementById("filterDept").value;
     const year = document.getElementById("filterYear").value;
-    const section = document.getElementById("filterSection").value;
     const roll = document.getElementById("filterRoll").value;
 
     const filtered = allStudents.filter(s => {
-        const matchesSearch = s.name?.toLowerCase().includes(term) || s.rollno?.toString().includes(term);
-        const matchesDept = dept === "" || s.department === dept;
-        const matchesYear = year === "" || s.year === year;
-        const matchesSection = section === "" || s.section === section;
-        const matchesRoll = roll === "" || s.rollno?.toString() === roll;
-        return matchesSearch && matchesDept && matchesYear && matchesSection && matchesRoll;
+        return (s.name?.toLowerCase().includes(term) || s.rollno?.toString().includes(term)) &&
+               (!dept || s.department === dept) &&
+               (!year || s.year === year) &&
+               (!roll || s.rollno?.toString() === roll);
     });
 
     document.getElementById("studentDetails").innerHTML = filtered.map(s => `
-        <div class="card student-card" onclick="openProfile('${s.id}')">
-            <div style="color: #6366f1; font-weight: bold; font-size: 0.8rem;">${s.year}</div>
-            <strong>${s.name}</strong><br>
-            <small>Roll: ${s.rollno} | Dept: ${s.department}</small>
+        <div class="card" style="cursor:pointer;" onclick="openProfile('${s.id}', '${s.rollno}')">
+            <strong>${s.name || 'N/A'}</strong><br>
+            <small>${s.rollno} | ${s.department}</small>
         </div>
     `).join('');
 }
 
-// --- INDIVIDUAL PROFILE VIEW ---
-window.openProfile = function(id) {
-    const s = allStudents.find(student => student.id === id);
-    if (!s) return;
+window.openProfile = async function(id, rollno) {
+    const s = allStudents.find(st => st.id === id);
+    document.querySelectorAll(".section").forEach(sec => sec.classList.remove("active"));
+    document.getElementById("section-student-profile").classList.add("active");
 
-    showSection("student-profile");
     document.getElementById("profileContainer").innerHTML = `
-        <div class="card profile-header">
-            <div class="profile-layout">
-                <div class="profile-info">
-                    <h1>${s.name}</h1>
-                    <p><strong>Email:</strong> ${s.email}</p>
-                    <p><strong>Mobile:</strong> ${s.mobile}</p>
-                    <p><strong>DOB:</strong> ${s.dob}</p>
-                    <p><strong>Gender:</strong> ${s.gender}</p>
-                </div>
-                <div class="profile-stats">
-                    <p><strong>Roll No:</strong> ${s.rollno}</p>
-                    <p><strong>Section:</strong> ${s.section}</p>
-                    <p><strong>Year:</strong> ${s.year}</p>
-                    <p><strong>Images Captured:</strong> ${s.imagesCount}</p>
-                    <p><strong>Joined:</strong> ${new Date(s.createdAt).toLocaleDateString()}</p>
-                </div>
+        <div class="card" style="border-top: 4px solid #6366f1;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                <h1 style="margin:0;">${s.name}</h1>
+                <input type="date" id="calFilter" onchange="window.loadLogs('${rollno}')" style="width:auto; padding:8px;">
             </div>
+            <div class="stats-cards" style="margin-bottom:20px;">
+                <div class="card"><h3>Roll No</h3><p style="font-size:1.2rem;">${s.rollno}</p></div>
+                <div class="card"><h3>Department</h3><p style="font-size:1.2rem;">${s.department}</p></div>
+            </div>
+            <table style="width:100%; border-collapse:collapse;">
+                <thead>
+                    <tr style="text-align:left; border-bottom:1px solid #1f2937;">
+                        <th style="padding:12px;">Date</th><th style="padding:12px;">Status</th><th style="padding:12px;">Confidence</th>
+                    </tr>
+                </thead>
+                <tbody id="logTableBody"></tbody>
+            </table>
         </div>
     `;
+    window.loadLogs(rollno);
 };
 
-document.getElementById("backToList").onclick = () => showSection("students");
+window.loadLogs = async function(rollno) {
+    const selectedDate = document.getElementById("calFilter").value;
+    const q = query(collection(dummyDb, "students_dummy", `dummy_${rollno}`, "attendance_logs"), orderBy("date", "desc"));
+    const snap = await getDocs(q);
+    let logs = snap.docs.map(d => d.data());
 
-// --- DASHBOARD CHART ---
+    if (selectedDate) logs = logs.filter(l => l.date === selectedDate);
+
+    document.getElementById("logTableBody").innerHTML = logs.map(l => `
+        <tr style="border-bottom:1px solid #1f2937;">
+            <td style="padding:12px;">${l.date}</td>
+            <td style="padding:12px; color:${l.status === 'Present' ? '#10b981' : '#f87171'}"><strong>${l.status}</strong></td>
+            <td style="padding:12px;">${(l.confidenceScore * 100).toFixed(1)}%</td>
+        </tr>
+    `).join('') || '<tr><td colspan="3" style="padding:20px; text-align:center;">No data found</td></tr>';
+};
+
+// Navigation
+document.getElementById("menuBtn").onclick = () => document.getElementById("sidebar").classList.toggle("active");
+document.querySelectorAll(".nav-link").forEach(link => {
+    link.onclick = () => {
+        document.querySelectorAll(".nav-link").forEach(l => l.classList.remove("active"));
+        link.classList.add("active");
+        document.querySelectorAll(".section").forEach(s => s.classList.remove("active"));
+        document.getElementById("section-" + link.dataset.section).classList.add("active");
+    };
+});
+document.getElementById("backToList").onclick = () => {
+    document.querySelectorAll(".section").forEach(s => s.classList.remove("active"));
+    document.getElementById("section-students").classList.add("active");
+};
+
 function updateDashboard(students) {
     document.getElementById("totalStudents").innerText = students.length;
-    // (Existing Chart Logic stays here...)
+    document.getElementById("presentCount").innerText = students.filter(s => s.status === "Present").length;
+    document.getElementById("absentCount").innerText = students.filter(s => s.status !== "Present").length;
 }
 
 init();
