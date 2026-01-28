@@ -46,11 +46,16 @@ if (loginBtn) {
 }
 
 // --- AUTH STATE CHECKER ---
-// This prevents unlogged users from accessing dashboard.html
 onAuthStateChanged(auth, (user) => {
   const path = window.location.pathname;
-  // If no user and trying to access dashboard, redirect to login
-  if (!user && path.includes("dashboard.html")) {
-    window.location.href = "login.html";
+  const isDashboard = path.includes("dashboard.html");
+
+  // If NOT logged in and trying to see dashboard, go to Login
+  if (!user && isDashboard) {
+    window.location.href = "index.html";
+  } 
+  // If ALREADY logged in and sitting on Login page, go to Dashboard
+  else if (user && (path.includes("index.html") || path === "/")) {
+    window.location.href = "dashboard.html";
   }
 });

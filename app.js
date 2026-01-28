@@ -137,3 +137,16 @@ function updateDashboard(students) {
 }
 
 init();
+
+// Add this to the bottom of your app.js
+import { auth } from "./firebase.js";
+import { signOut } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
+
+document.getElementById("logoutLink").onclick = async () => {
+    try {
+        await signOut(auth);
+        window.location.href = "index.html";
+    } catch (error) {
+        console.error("Logout Error:", error);
+    }
+};
